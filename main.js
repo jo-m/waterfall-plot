@@ -1,95 +1,117 @@
 var WaterfallDiagram = function(){
-  // this.camera, scene, renderer;
+  this.d3 = {
+    camera: null,
+    scene: null,
+    renderer: null,
+    lineMaterial: null,
+    shapeMaterial: null
+  }
+
+  this.audio = {
+    context: null,
+    analyser: null,
+    input: null,
+    inputPoint: null,
+    freqByteData: null,
+  }
+
   this.curves = [];
   this.startTimestamp = null;
-  // this.audioContext;
-  // this.analyserNode;
-  // this.realAudioInput;
-  // this.audioInput;
-  // this.inputPoint;
+  this.frameCounter = 0;
+  this.skipFrames = 2;
+  this.maxCurves = 50;
 
-  this.counter = 0;
+  this.init3d();
 };
 
-WaterfallDiagram.prototype.newFrame = function() {
-  var freqByteData = new Uint8Array(this.analyserNode.frequencyBinCount);
-
-  this.analyserNode.getByteFrequencyData(freqByteData);
-
-  return freqByteData.slice(0, 140)
+WaterfallDiagram.prototype.getNewData = function() {
+  this.audio.analyser.getByteFrequencyData(this.audio.freqByteData);
+  return this.audio.freqByteData.slice(0, 140);
 }
 
-WaterfallDiagram.prototype.makeShape = function(x, width, height, material) {
-  var shape = new THREE.Shape()
-  var step = width / (x.length + 1)
+WaterfallDiagram.prototype.makeShape = function(data, width, height) {
+  var shape = new THREE.Shape();
+  var step = width / (data.length + 1);
 
   shape.moveTo( 0, 0 );
-  // shape.lineTo( 0, 0 );
-
-  x.forEach(function(elm, index) {
-    shape.lineTo( step * (index + 1), elm * height)
+  data.forEach(function(elm, index) {
+    shape.lineTo( step * (index + 1), elm * height);
   })
-
   shape.lineTo( width, 0 );
-  return shape
+
+  return shape;
 }
 
-WaterfallDiagram.prototype.makeObjects = function( shape) {
+WaterfallDiagram.prototype.makeObjects = function(shape) {
   var group = new THREE.Group();
-  group.rotation.x = Math.PI * 0.5
-  //
-  // // flat shape
+
+  // flat shape
   var geometry = new THREE.ShapeGeometry( shape );
-  var mesh = new THREE.Mesh( geometry, new THREE.MeshBasicMaterial( { color: 0x000000, side: THREE.DoubleSide } ) );
+  var mesh = new THREE.Mesh( geometry, this.d3.shapeMaterial );
 
   // solid line
   var points = shape.createPointsGeometry();
-  var line = new THREE.Line( points, new THREE.LineBasicMaterial( { color: 0xffffff, linewidth: 1 } ) );
+  var line = new THREE.Line( points, this.d3.lineMaterial );
 
   group.add( line );
   group.add( mesh );
+  group.rotation.x = Math.PI * 0.5;
   return group;
 }
 
-WaterfallDiagram.prototype.init = function() {
-  this.scene = new THREE.Scene();
+WaterfallDiagram.prototype.init3d = function() {
+  this.d3.scene = new THREE.Scene();
 
-  this.camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 1, 1000);
-  this.camera.rotation.x = Math.PI * 0.3
-  this.camera.position.set( 100, -100, 130 );
-  this.scene.add( this.camera );
+  this.d3.camera = new THREE.PerspectiveCamera(
+    35, window.innerWidth / window.innerHeight, 1, 1000);
+  this.d3.camera.rotation.x = Math.PI * 0.3;
+  this.d3.camera.position.set( 100, -100, 130 );
+  this.d3.scene.add( this.d3.camera );
 
   var light = new THREE.PointLight( 0xffffff, 0.8 );
-  this.camera.add( light );
+  this.d3.camera.add( light );
 
-  this.scene.add(buildAxes(1000));
+  this.d3.scene.add(buildAxes(1000));
 
-  this.renderer = new THREE.WebGLRenderer( { antialias: true } );
-  this.renderer.setClearColor( 0x000000 );
-  this.renderer.setPixelRatio( window.devicePixelRatio );
-  this.renderer.setSize( window.innerWidth, window.innerHeight );
-  document.body.appendChild( this.renderer.domElement );
+  this.d3.lineMaterial=  new THREE.LineBasicMaterial({
+    color: 0xffffff, linewidth: 1
+  });
+  this.d3.shapeMaterial=  new THREE.MeshBasicMaterial({
+    color: 0x000000, side: THREE.DoubleSide
+  });
+
+  this.d3.renderer = new THREE.WebGLRenderer( { antialias: true } );
+  this.d3.renderer.setClearColor( 0x000000 );
+  this.d3.renderer.setPixelRatio( window.devicePixelRatio );
+  this.d3.renderer.setSize( window.innerWidth, window.innerHeight );
+  document.body.appendChild( this.d3.renderer.domElement );
 }
 
-WaterfallDiagram.prototype.insertNewFrame = function() {
-  requestAnimationFrame( this.insertNewFrame.bind(this) );
-  this.counter ++;
-  if(this.counter % 2 != 0) {
-    return
+WaterfallDiagram.prototype.addNewData = function() {
+  // only every n-th frame a new data set is inserted
+  requestAnimationFrame( this.addNewData.bind(this) );
+  this.frameCounter++;
+  if(this.frameCounter % this.skipFrames != 0) {
+    return;
   } else {
-    this.counter = 0
+    this.frameCounter = 0;
   }
 
-  var maxCurves = 50
-  var x = this.newFrame();
-  var shape = this.makeShape(x, 200, 0.1)
-  var curve = this.makeObjects(shape)
-  this.curves.unshift(curve)
-  this.scene.add(curve)
+  // audio not yet initialized
+  if(this.audio.analyser == null) {
+    return;
+  }
 
-  var len = this.curves.length
-  if(len > this.maxCurves) {
-    this.scene.remove( this.curves.pop() )
+  // get new dataset
+  var data = this.getNewData();
+  var shape = this.makeShape(data, 200, 0.1);
+  var curve = this.makeObjects(shape);
+  this.curves.unshift(curve);
+  this.d3.scene.add(curve);
+
+  // insert it and remove old
+  if(this.curves.length > this.maxCurves) {
+    this.d3.scene.remove(this.curves.pop());
   }
 }
 
@@ -100,33 +122,30 @@ WaterfallDiagram.prototype.render = function(timestamp) {
   var progress = timestamp - this.startTimestamp;
 
   this.curves.forEach(function(curve) {
-    curve.position.y += 2
+    curve.position.y += 2;
   })
 
-  this.renderer.render(this.scene, this.camera);
+  this.d3.renderer.render(this.d3.scene, this.d3.camera);
   requestAnimationFrame( this.render.bind(this) );
 }
 
 WaterfallDiagram.prototype.gotStream = function(stream) {
-    this.inputPoint = this.audioContext.createGain();
+    this.audio.inputPoint = this.audio.context.createGain();
 
     // Create an AudioNode from the stream.
-    this.realAudioInput = this.audioContext.createMediaStreamSource(stream);
-    this.audioInput = this.realAudioInput;
-    this.audioInput.connect(this.inputPoint);
+    this.audio.input = this.audio.context.createMediaStreamSource(stream);
+    this.audio.input.connect(this.audio.inputPoint);
 
-    this.analyserNode = this.audioContext.createAnalyser();
-    this.analyserNode.fftSize = 2048;
-    this.inputPoint.connect( this.analyserNode );
-
-    // setInterval(insertNewFrame, 300)
-    requestAnimationFrame( this.insertNewFrame.bind(this) );
+    this.audio.analyser = this.audio.context.createAnalyser();
+    this.audio.analyser.fftSize = 2048;
+    this.audio.freqByteData = new Uint8Array(this.audio.analyser.frequencyBinCount);
+    this.audio.inputPoint.connect( this.audio.analyser );
 }
 
 WaterfallDiagram.prototype.initAudio = function() {
   window.AudioContext = window.AudioContext || window.webkitAudioContext;
 
-  this.audioContext = new AudioContext();
+  this.audio.context = new AudioContext();
 
   navigator.getUserMedia = navigator.getUserMedia ||
   navigator.webkitGetUserMedia ||
@@ -138,20 +157,24 @@ WaterfallDiagram.prototype.initAudio = function() {
 
   if (navigator.getUserMedia) {
     navigator.getUserMedia(
-        {
-            audio: true
-        }, this.gotStream.bind(this), function(e) {
-            alert('Error getting audio');
-            console.log(e);
-        });
-      } else {
+      {audio: true},
+      this.gotStream.bind(this),
+      function(e) {
         alert('Error getting audio');
-      }
+        console.log(e);
+      });
+    } else {
+      alert('Error getting audio');
+    }
+}
+
+WaterfallDiagram.prototype.start = function() {
+  this.initAudio();
+  requestAnimationFrame( this.addNewData.bind(this) );
+  requestAnimationFrame( this.render.bind(this) );
 }
 
 function main() {
   var waterfall = new WaterfallDiagram();
-  waterfall.init()
-  waterfall.initAudio()
-  requestAnimationFrame( waterfall.render.bind(waterfall) );
+  waterfall.start();
 }
