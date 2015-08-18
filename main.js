@@ -96,8 +96,13 @@ WaterfallDiagram.prototype.init3d = function() {
   this.d3.renderer = new THREE.WebGLRenderer( { antialias: true } );
   this.d3.renderer.setClearColor( 0x000000 );
   this.d3.renderer.setPixelRatio( window.devicePixelRatio );
-  this.d3.renderer.setSize( window.innerWidth, window.innerHeight );
+  this.d3.renderer.setSize( window.innerWidth, window.innerHeight);
   document.body.appendChild( this.d3.renderer.domElement );
+  document.body.onresize = this.resizeWindow.bind(this);
+}
+
+WaterfallDiagram.prototype.resizeWindow = function() {
+  this.d3.renderer.setSize( window.innerWidth, window.innerHeight);
 }
 
 WaterfallDiagram.prototype.addNewData = function() {
