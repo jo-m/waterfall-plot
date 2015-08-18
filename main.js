@@ -1,24 +1,25 @@
-// http://webaudiodemos.appspot.com/AudioRecorder/index.html
+var WaterfallDiagram = function(){
+  // this.camera, scene, renderer;
+  this.curves = [];
+  this.startTimestamp = null;
+  // this.audioContext;
+  // this.analyserNode;
+  // this.realAudioInput;
+  // this.audioInput;
+  // this.inputPoint;
 
-var camera, scene, renderer;
-var curves = [];
-var startTimestamp = null;
-var audioContext;
-var analyserNode;
-var realAudioInput;
-var audioInput;
-var inputPoint;
-var counter = 0;
+  this.counter = 0;
+};
 
-function newFrame() {
-  var freqByteData = new Uint8Array(analyserNode.frequencyBinCount);
+WaterfallDiagram.prototype.newFrame = function() {
+  var freqByteData = new Uint8Array(this.analyserNode.frequencyBinCount);
 
-  analyserNode.getByteFrequencyData(freqByteData);
+  this.analyserNode.getByteFrequencyData(freqByteData);
 
   return freqByteData.slice(0, 140)
 }
 
-function makeShape(x, width, height, material) {
+WaterfallDiagram.prototype.makeShape = function(x, width, height, material) {
   var shape = new THREE.Shape()
   var step = width / (x.length + 1)
 
@@ -33,7 +34,7 @@ function makeShape(x, width, height, material) {
   return shape
 }
 
-function makeObjects( shape) {
+WaterfallDiagram.prototype.makeObjects = function( shape) {
   var group = new THREE.Group();
   group.rotation.x = Math.PI * 0.5
   //
@@ -50,80 +51,84 @@ function makeObjects( shape) {
   return group;
 }
 
-function init() {
-  scene = new THREE.Scene();
+WaterfallDiagram.prototype.init = function() {
+  this.scene = new THREE.Scene();
 
-  camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 1, 1000);
-  camera.rotation.x = Math.PI * 0.3
-  camera.position.set( 100, -100, 130 );
-  scene.add( camera );
+  this.camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 1, 1000);
+  this.camera.rotation.x = Math.PI * 0.3
+  this.camera.position.set( 100, -100, 130 );
+  this.scene.add( this.camera );
 
   var light = new THREE.PointLight( 0xffffff, 0.8 );
-  camera.add( light );
+  this.camera.add( light );
 
-  scene.add(buildAxes(1000));
+  this.scene.add(buildAxes(1000));
 
-  renderer = new THREE.WebGLRenderer( { antialias: true } );
-  renderer.setClearColor( 0x000000 );
-  renderer.setPixelRatio( window.devicePixelRatio );
-  renderer.setSize( window.innerWidth, window.innerHeight );
-  document.body.appendChild( renderer.domElement );
+  this.renderer = new THREE.WebGLRenderer( { antialias: true } );
+  this.renderer.setClearColor( 0x000000 );
+  this.renderer.setPixelRatio( window.devicePixelRatio );
+  this.renderer.setSize( window.innerWidth, window.innerHeight );
+  document.body.appendChild( this.renderer.domElement );
 }
 
-function insertNewFrame() {
-  requestAnimationFrame( insertNewFrame );
-  counter ++;
-  if(counter % 2 != 0) {
+WaterfallDiagram.prototype.insertNewFrame = function() {
+  requestAnimationFrame( this.insertNewFrame );
+  this.counter ++;
+  if(this.counter % 2 != 0) {
     return
   } else {
-    counter = 0
+    this.counter = 0
   }
 
   var maxCurves = 50
   var x = newFrame();
-  shape = makeShape(x, 200, 0.1)
-  curve = makeObjects(shape)
-  curves.unshift(curve)
-  scene.add(curve)
+  var shape = makeShape(x, 200, 0.1)
+  var curve = makeObjects(shape)
+  this.curves.unshift(curve)
+  this.scene.add(curve)
 
-  var len = curves.length
-  if(len > maxCurves) {
-    scene.remove( curves.pop() )
+  var len = this.curves.length
+  if(len > this.maxCurves) {
+    this.scene.remove( this.curves.pop() )
   }
 }
 
-function render(timestamp) {
-  if (!startTimestamp) startTimestamp = timestamp;
+WaterfallDiagram.prototype.render = function(timestamp) {
+  if (!this.startTimestamp) {
+    this.startTimestamp = timestamp;
+  }
   var progress = timestamp - startTimestamp;
 
-  curves.forEach(function(curve) {
+  console.log(this)
+
+  this.curves.forEach(function(curve) {
     curve.position.y += 2
   })
 
-  renderer.render(scene, camera);
-  requestAnimationFrame( render );
+  this.renderer.render(this.scene, this.camera);
+  requestAnimationFrame( this.render );
 }
 
-function gotStream(stream) {
-    inputPoint = audioContext.createGain();
+WaterfallDiagram.prototype.gotStream = function(stream) {
+    this.inputPoint = this.audioContext.createGain();
 
     // Create an AudioNode from the stream.
-    realAudioInput = audioContext.createMediaStreamSource(stream);
-    audioInput = realAudioInput;
-    audioInput.connect(inputPoint);
+    this.realAudioInput = this.audioContext.createMediaStreamSource(stream);
+    this.audioInput = this.realAudioInput;
+    this.audioInput.connect(this.inputPoint);
 
-    analyserNode = audioContext.createAnalyser();
-    analyserNode.fftSize = 2048;
-    inputPoint.connect( analyserNode );
+    this.analyserNode = this.audioContext.createAnalyser();
+    this.analyserNode.fftSize = 2048;
+    this.inputPoint.connect( this.analyserNode );
 
     // setInterval(insertNewFrame, 300)
-    requestAnimationFrame( insertNewFrame );
+    requestAnimationFrame( this.insertNewFrame );
 }
 
-function initAudio() {
+WaterfallDiagram.prototype.initAudio = function() {
   window.AudioContext = window.AudioContext || window.webkitAudioContext;
 
-  audioContext = new AudioContext();
+  this.audioContext = new AudioContext();
 
   navigator.getUserMedia = navigator.getUserMedia ||
   navigator.webkitGetUserMedia ||
@@ -137,7 +142,7 @@ function initAudio() {
     navigator.getUserMedia(
         {
             audio: true
-        }, gotStream, function(e) {
+        }, this.gotStream, function(e) {
             alert('Error getting audio');
             console.log(e);
         });
@@ -147,7 +152,9 @@ function initAudio() {
 }
 
 function main() {
-  init()
-  initAudio()
-  requestAnimationFrame( render );
+  var waterfall = new WaterfallDiagram();
+  waterfall.init()
+  waterfall.initAudio()
+  console.log(waterfall)
+  requestAnimationFrame( waterfall.render );
 }
