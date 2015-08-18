@@ -72,7 +72,7 @@ WaterfallDiagram.prototype.init = function() {
 }
 
 WaterfallDiagram.prototype.insertNewFrame = function() {
-  requestAnimationFrame( this.insertNewFrame );
+  requestAnimationFrame( this.insertNewFrame.bind(this) );
   this.counter ++;
   if(this.counter % 2 != 0) {
     return
@@ -81,9 +81,9 @@ WaterfallDiagram.prototype.insertNewFrame = function() {
   }
 
   var maxCurves = 50
-  var x = newFrame();
-  var shape = makeShape(x, 200, 0.1)
-  var curve = makeObjects(shape)
+  var x = this.newFrame();
+  var shape = this.makeShape(x, 200, 0.1)
+  var curve = this.makeObjects(shape)
   this.curves.unshift(curve)
   this.scene.add(curve)
 
@@ -97,16 +97,14 @@ WaterfallDiagram.prototype.render = function(timestamp) {
   if (!this.startTimestamp) {
     this.startTimestamp = timestamp;
   }
-  var progress = timestamp - startTimestamp;
-
-  console.log(this)
+  var progress = timestamp - this.startTimestamp;
 
   this.curves.forEach(function(curve) {
     curve.position.y += 2
   })
 
   this.renderer.render(this.scene, this.camera);
-  requestAnimationFrame( this.render );
+  requestAnimationFrame( this.render.bind(this) );
 }
 
 WaterfallDiagram.prototype.gotStream = function(stream) {
@@ -122,7 +120,7 @@ WaterfallDiagram.prototype.gotStream = function(stream) {
     this.inputPoint.connect( this.analyserNode );
 
     // setInterval(insertNewFrame, 300)
-    requestAnimationFrame( this.insertNewFrame );
+    requestAnimationFrame( this.insertNewFrame.bind(this) );
 }
 
 WaterfallDiagram.prototype.initAudio = function() {
@@ -142,7 +140,7 @@ WaterfallDiagram.prototype.initAudio = function() {
     navigator.getUserMedia(
         {
             audio: true
-        }, this.gotStream, function(e) {
+        }, this.gotStream.bind(this), function(e) {
             alert('Error getting audio');
             console.log(e);
         });
@@ -155,6 +153,5 @@ function main() {
   var waterfall = new WaterfallDiagram();
   waterfall.init()
   waterfall.initAudio()
-  console.log(waterfall)
-  requestAnimationFrame( waterfall.render );
+  requestAnimationFrame( waterfall.render.bind(waterfall) );
 }
