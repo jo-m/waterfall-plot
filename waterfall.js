@@ -33,23 +33,28 @@ var WaterfallDiagram = function(){
     to: null
   }
 
+  navigator.requestAnimationFrame = navigator.requestAnimationFrame ||
+    navigator.webkitRequestAnimationFrame ||
+    navigator.mozRequestAnimationFrame;
+
   this.init3d();
 };
 
 WaterfallDiagram.prototype.getNewData = function() {
   this.audio.analyser.getByteFrequencyData(this.audio.freqByteData);
-  return this.audio.freqByteData.slice(
+  return this.audio.freqByteData.subarray(
     this.fftWindowSize.from, this.fftWindowSize.to);
 }
 
 WaterfallDiagram.prototype.makeShape = function(data, width, height) {
   var shape = new THREE.Shape();
   var step = width / (data.length + 1);
+  var len = data.length;
 
   shape.moveTo( 0, 0 );
-  data.forEach(function(elm, index) {
-    shape.lineTo( step * (index + 1), elm * height);
-  })
+  for(var i = 0; i < len; i++) {
+    shape.lineTo(step * (i + 1), data[i] * height);
+  }
   shape.lineTo( width, 0 );
 
   return shape;
@@ -167,18 +172,14 @@ WaterfallDiagram.prototype.calcFFTWindowSize = function() {
 }
 
 WaterfallDiagram.prototype.initAudio = function() {
-  window.AudioContext = window.AudioContext || window.webkitAudioContext;
+  window.AudioContext  = window.AudioContext || window.webkitAudioContext;
 
-  this.audio.context = new AudioContext();
+  this.audio.context = new window.AudioContext();
   this.calcFFTWindowSize();
 
   navigator.getUserMedia = navigator.getUserMedia ||
-  navigator.webkitGetUserMedia ||
-  navigator.mozGetUserMedia;
-
-  navigator.requestAnimationFrame = navigator.requestAnimationFrame ||
-  navigator.webkitRequestAnimationFrame ||
-  navigator.mozRequestAnimationFrame;
+    navigator.webkitGetUserMedia ||
+    navigator.mozGetUserMedia;
 
   if (navigator.getUserMedia) {
     navigator.getUserMedia(
@@ -187,10 +188,10 @@ WaterfallDiagram.prototype.initAudio = function() {
       function(e) {
         alert('Error getting audio');
         console.log(e);
-      });
-    } else {
-      alert('Error getting audio');
-    }
+    });
+  } else {
+    alert('Error getting audio');
+  }
 }
 
 WaterfallDiagram.prototype.start = function() {
