@@ -23,9 +23,9 @@ var WaterfallDiagram = function(){
     maxCurves: 50,
     skipFrames: 2,
     movementSpeed: 2,
-    fftSize: 2048,
+    fftSize: 1024,
     minFreqHz: 0,
-    maxFreqHz: 1000
+    maxFreqHz: 5000
   }
 
   this.fftWindowSize = {
@@ -38,7 +38,8 @@ var WaterfallDiagram = function(){
 
 WaterfallDiagram.prototype.getNewData = function() {
   this.audio.analyser.getByteFrequencyData(this.audio.freqByteData);
-  return this.audio.freqByteData.slice(0, 140);
+  return this.audio.freqByteData.slice(
+    this.fftWindowSize.from, this.fftWindowSize.to);
 }
 
 WaterfallDiagram.prototype.makeShape = function(data, width, height) {
@@ -75,7 +76,7 @@ WaterfallDiagram.prototype.init3d = function() {
   this.d3.scene = new THREE.Scene();
 
   this.d3.camera = new THREE.PerspectiveCamera(
-    35, window.innerWidth / window.innerHeight, 1, 1000);
+    40, window.innerWidth / window.innerHeight, 1, 1000);
   this.d3.camera.rotation.x = Math.PI * 0.3;
   this.d3.camera.position.set( 100, -100, 130 );
   this.d3.scene.add( this.d3.camera );
