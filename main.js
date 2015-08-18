@@ -18,8 +18,20 @@ var WaterfallDiagram = function(){
   this.curves = [];
   this.startTimestamp = null;
   this.frameCounter = 0;
-  this.skipFrames = 2;
-  this.maxCurves = 50;
+
+  this.config = {
+    maxCurves: 50,
+    skipFrames: 2,
+    movementSpeed: 2,
+    fftSize: 2048,
+    minFreqHz: 0,
+    maxFreqHz: 1000
+  }
+
+  this.fftWindowSize = {
+    from: null,
+    to: null
+  }
 
   this.init3d();
 };
@@ -91,7 +103,7 @@ WaterfallDiagram.prototype.addNewData = function() {
   // only every n-th frame a new data set is inserted
   requestAnimationFrame( this.addNewData.bind(this) );
   this.frameCounter++;
-  if(this.frameCounter % this.skipFrames != 0) {
+  if(this.frameCounter % this.config.skipFrames != 0) {
     return;
   } else {
     this.frameCounter = 0;
@@ -110,7 +122,7 @@ WaterfallDiagram.prototype.addNewData = function() {
   this.d3.scene.add(curve);
 
   // insert it and remove old
-  if(this.curves.length > this.maxCurves) {
+  if(this.curves.length > this.config.maxCurves) {
     this.d3.scene.remove(this.curves.pop());
   }
 }
@@ -121,9 +133,10 @@ WaterfallDiagram.prototype.render = function(timestamp) {
   }
   var progress = timestamp - this.startTimestamp;
 
+  var movementSpeed = this.config.movementSpeed;
   this.curves.forEach(function(curve) {
-    curve.position.y += 2;
-  })
+    curve.position.y += movementSpeed;
+  });
 
   this.d3.renderer.render(this.d3.scene, this.d3.camera);
   requestAnimationFrame( this.render.bind(this) );
@@ -137,15 +150,23 @@ WaterfallDiagram.prototype.gotStream = function(stream) {
     this.audio.input.connect(this.audio.inputPoint);
 
     this.audio.analyser = this.audio.context.createAnalyser();
-    this.audio.analyser.fftSize = 2048;
+    this.audio.analyser.fftSize = this.config.fftSize;
     this.audio.freqByteData = new Uint8Array(this.audio.analyser.frequencyBinCount);
     this.audio.inputPoint.connect( this.audio.analyser );
+}
+
+WaterfallDiagram.prototype.calcFFTWindowSize = function() {
+  var maxFreq = this.audio.context.sampleRate / 2;
+  var sizePerFreq = this.config.fftSize / maxFreq;
+  this.fftWindowSize.from = Math.floor(sizePerFreq * this.config.minFreqHz);
+  this.fftWindowSize.to = Math.floor(sizePerFreq * this.config.maxFreqHz);
 }
 
 WaterfallDiagram.prototype.initAudio = function() {
   window.AudioContext = window.AudioContext || window.webkitAudioContext;
 
   this.audio.context = new AudioContext();
+  this.calcFFTWindowSize();
 
   navigator.getUserMedia = navigator.getUserMedia ||
   navigator.webkitGetUserMedia ||
