@@ -1,7 +1,7 @@
 # Waterfall plot in Javascript 3D
 Implements a moving [Waterfall Plot](https://en.wikipedia.org/wiki/Waterfall_plot) using [THREE.js](http://threejs.org/) and web audio. Currently works in Firefox and Chrome.
 
-[Demo](https://people.ee.ethz.ch/~muejonat/files/gitrepos/waterfall-js/)
+[Demo](https://jo-m.ch/files/gitrepos/waterfall-js/)
 
 ![image](screenshot.png)
 
