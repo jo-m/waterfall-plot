@@ -3,7 +3,7 @@
 
 Implements a moving [Waterfall Plot](https://en.wikipedia.org/wiki/Waterfall_plot) using [THREE.js](http://threejs.org/) and web audio. Currently works in Firefox and Chrome.
 
-[Demo](https://jo-m.ch/files/gitrepos/waterfall-js/)
+[Demo](https://jo-m.ch/repos/waterfall-plot/)
 
 ![image](screenshot.png)
 
